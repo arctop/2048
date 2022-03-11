@@ -13,6 +13,8 @@ import android.view.View;
 
 import java.util.ArrayList;
 
+import io.neuos.NeuosSDK;
+
 @SuppressWarnings("deprecation")
 public class MainView extends View {
 
@@ -72,10 +74,10 @@ public class MainView extends View {
     private int titleWidthScore;
 
     // storing neuos values
-    private int focusValue;
-    private int enjoymentValue;
-    private int zoneValue;
-    private int heartRateValue;
+    private float focusValue;
+    private float enjoymentValue;
+    private float zoneValue;
+    private float heartRateValue;
 
     public MainView(Context context) {
         super(context);
@@ -103,12 +105,38 @@ public class MainView extends View {
         if (n <= 0) throw new IllegalArgumentException();
         return 31 - Integer.numberOfLeadingZeros(n);
     }
+
+    // keep a quick ref to the rect colors for the Neuos items
     private static final int[] neuosRects = {
             R.drawable.focus_rect,
             R.drawable.enjoyment_rect,
             R.drawable.zone_rect,
             R.drawable.heartrate_rect
     };
+
+    // update the neuos values and invalidate the screen to re-draw
+    public void updateNeuosValue(String key , float value){
+        switch (key){
+            case NeuosSDK.PredictionValues.ZONE_STATE:{
+                zoneValue = value;
+                break;
+            }
+            case NeuosSDK.PredictionValues.ENJOYMENT_STATE:{
+                enjoymentValue = value;
+                break;
+            }
+            case NeuosSDK.PredictionValues.FOCUS_STATE:{
+                focusValue = value;
+                break;
+            }
+            case NeuosSDK.PredictionValues.HEART_RATE:{
+                heartRateValue = value;
+                break;
+            }
+        }
+        invalidate();
+    }
+
     @Override
     public void onDraw(Canvas canvas) {
         //Reset the transparency of the screen
@@ -141,6 +169,7 @@ public class MainView extends View {
             refreshLastTime = false;
         }
 
+        // draw the Neuos Values at the bottom of the screen
         drawNeuosItem(canvas, "Focus" , focusValue , 0);
         drawNeuosItem(canvas, "Enjoyment" , enjoymentValue , 1);
         drawNeuosItem(canvas, "Zone", zoneValue , 2);
@@ -448,18 +477,18 @@ public class MainView extends View {
         drawUndoButton(canvas);
         drawBackground(canvas);
         drawBackgroundGrid(canvas);
-        //if (showHelp)
         drawInstructions(canvas);
     }
 
-    private void drawNeuosItem(Canvas canvas ,String title, int value , int cellIndex){
+    // Draws a single neuos item at the bottom of the screen
+    private void drawNeuosItem(Canvas canvas ,String title, float value , int cellIndex){
         int top = endingY + textPaddingSize * 4;
         int start = startingX + cellIndex * (cellSize + textPaddingSize);
         Drawable rect = getResources().getDrawable(neuosRects[cellIndex]);
         rect.setBounds(start, top , start + cellSize, top + cellSize);
         rect.draw(canvas);
         int textShiftY = 0;//centerText();
-        paint.setTextSize(titleTextSize);
+        paint.setTextSize(titleTextSize * 1.5f);
         paint.setColor(getResources().getColor(R.color.text_white));
         canvas.drawText(title, start + cellSize / 2, top + cellSize  / 6 , paint);
         paint.setTextSize(bodyTextSize);

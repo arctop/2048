@@ -1,19 +1,28 @@
 package io.neuos.a2048;
 
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.content.pm.ActivityInfo;
+import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.pm.ServiceInfo;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.os.RemoteException;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
 //import com.google.android.gms.auth.api.Auth;
 //import com.google.android.gms.auth.api.signin.GoogleSignIn;
@@ -34,6 +43,7 @@ import java.util.List;
 
 import io.neuos.INeuosSdk;
 import io.neuos.INeuosSdkListener;
+import io.neuos.NeuosSDK;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -68,6 +78,10 @@ public class MainActivity extends AppCompatActivity {
                 load();
             }
         }
+        deviceListReceiver = new MuseConnectionBroadcastReceiver();
+        registerReceiver(deviceListReceiver,
+                new IntentFilter(NeuosSDK.IO_NEUOS_DEVICE_PAIRING_ACTION));
+        checkSDKPermissions();
         setContentView(view);
     }
 
@@ -172,6 +186,17 @@ public class MainActivity extends AppCompatActivity {
         view.game.lastGameState = settings.getInt(UNDO_GAME_STATE, view.game.lastGameState);
     }
 
+    @Override
+    protected void onDestroy() {
+        try {
+            mService.finishSession();
+            unregisterReceiver(deviceListReceiver);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+        super.onDestroy();
+    }
+
     /**
      * Signs into Google. Used for cloud saves.
      */
@@ -210,7 +235,7 @@ public class MainActivity extends AppCompatActivity {
 //        });
 //    }
 
-    @Override
+    /*@Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 //        if (requestCode != RC_SIGN_IN) {
@@ -240,37 +265,201 @@ public class MainActivity extends AppCompatActivity {
 //                }
 //            });
 //        }
-    }
+    }*/
 
     final String TAG = "Neuos SDK";
-    final String API_KEY = "**************";
-    private boolean s = doBindService();
-    private final ServiceConnection mConnection = new ServiceConnection() {
-        private final INeuosSdkListener mCallback = null;
-        private INeuosSdk mService;
+    final String API_KEY = "aaaa";
+    public static final String PREDICTION_NAME = "zone";
+    private INeuosSdk mService;
+    private Runnable mPostConnection;
+    private MuseConnectionBroadcastReceiver deviceListReceiver;
+    private class MuseConnectionBroadcastReceiver extends BroadcastReceiver {
 
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String address = intent.getStringExtra(io.neuos.NeuosSDK.DEVICE_ADDRESS_EXTRA);
+            Log.d(TAG, "Connection Intent : " + address);
+            try {
+                mService.connectSensorDevice(address);
+            } catch (RemoteException e) {
+                Log.e(TAG, e.getLocalizedMessage());
+            }
+        }
+    }
+    private final INeuosSdkListener mCallback = new INeuosSdkListener.Stub() {
+        @Override
+        public void onConnectionChanged(int previousConnection, int currentConnection) throws RemoteException {
+            Log.i(TAG, "onConnectionChanged P: " + previousConnection + " C: " + currentConnection);
+            if (currentConnection == NeuosSDK.ConnectionState.CONNECTED){
+                if (mPostConnection != null){
+                    mPostConnection.run();
+                    mPostConnection = null;
+                }
+            }
+        }
+        @Override
+        public void onValueChanged(String key, float value) throws RemoteException {
+            Log.i(TAG, "onValueChanged K: " + key + " V: " + value);
+            view.updateNeuosValue(key, value);
+        }
+        @Override
+        public void onQAStatus(boolean passed , int type){
+            Log.i(TAG, "on QA Passed: " + passed + " T: " + type);
+        }
+
+        @Override
+        public void onSessionComplete() throws RemoteException {
+            Log.i(TAG, "onSessionComplete");
+        }
+
+
+        @Override
+        public void onError(int errorCode, String message) throws RemoteException {
+            Log.i(TAG, "onError Code: " + errorCode + " " + message);
+        }
+    };
+    private final ActivityResultLauncher<String> requestPermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+                if (isGranted) {
+                    // Permission is granted. Continue the action or workflow in your
+                    // app.
+                    //launchHome();
+                    doBindService();
+                } else {
+                    // Explain to the user that the feature is unavailable because the
+                    // features requires a permission that the user has denied. At the
+                    // same time, respect the user's decision. Don't link to system
+                    // settings in an effort to convince the user to change their
+                    // decision.
+                }
+            });
+    private void checkSDKPermissions(){
+        if (ContextCompat.checkSelfPermission(
+                this, NeuosSDK.NEUOS_PERMISSION) ==
+                PackageManager.PERMISSION_GRANTED) {
+            // You can use the API that requires the permission.
+            doBindService();
+            //performAction(...);
+        } /*else if (shouldShowRequestPermissionRationale(...)) {
+            // In an educational UI, explain to the user why your app requires this
+            // permission for a specific feature to behave as expected. In this UI,
+            // include a "cancel" or "no thanks" button that allows the user to
+            // continue using your app without granting the permission.
+            //showInContextUI(...);
+        }*/ else {
+            // You can directly ask for the permission.
+            // The registered ActivityResultCallback gets the result of this request.
+            requestPermissionLauncher.launch(
+                    NeuosSDK.NEUOS_PERMISSION);
+        }
+    }
+
+
+
+    /**
+     * Class for interacting with the main interface of the service.
+     */
+    private ServiceConnection mConnection = new ServiceConnection() {
         public void onServiceConnected(ComponentName className,
                                        IBinder service) {
             Log.d(TAG, "Attached.");
-            // Once connected, you can cast the binder object
-            // into the proper type
             mService = INeuosSdk.Stub.asInterface(service);
-            //And start interacting with the service.
             try {
-                // Register for service callbacks
-//                mService.registerCallback(mCallback);
-                // Initialize the service API with your API key
-                mService.initializeNeuos(API_KEY);
-            } catch (Exception e) {
+                int response = mService.initializeNeuos(API_KEY);
+                if ( response != NeuosSDK.ErrorCodes.SUCCESS){
+                    Log.i(TAG, "initialize: failed with code " + response);
+                }
+                else{
+                    response = mService.registerSDKCallback(mCallback);
+                    checkNeuosLoginStatus();
+                    Log.i(TAG, "register callback: returned with code " + response);
+                }
+            } catch (RemoteException e) {
                 Log.e(TAG, e.getLocalizedMessage());
             }
         }
 
         public void onServiceDisconnected(ComponentName className) {
-            // This will be called when an Unexpected disconnection happens.
             Log.d(TAG, "Detached.");
         }
     };
+    public void checkCalibrationStatus(){
+        try {
+            int calibrationStatus = mService.checkUserCalibrationStatus();
+            Log.i(TAG, "onUserCalibrationStatus: " + calibrationStatus);
+            if (calibrationStatus == NeuosSDK.UserCalibrationStatus.NEEDS_CALIBRATION){
+                connectToMuse();
+                //TODO:
+                //mPostConnection = () -> startCalibration(null);
+            }
+            else if (calibrationStatus == NeuosSDK.UserCalibrationStatus.MODELS_AVAILABLE){
+                connectToMuse();
+                //TODO: add QA here as well.
+                mPostConnection = () -> startSession();
+            }
+        } catch (RemoteException e) {
+            Log.e(TAG, e.getLocalizedMessage());
+        }
+    }
+    public void startSession() {
+        try {
+            //isSessionInProgress = true;
+            int response = mService.startPredictionSession(PREDICTION_NAME);
+            if ( response != NeuosSDK.ErrorCodes.SUCCESS){
+                Log.i(TAG, "startSession: failed with code " + response);
+            }
+        } catch (RemoteException e) {
+            Log.e(TAG, e.getLocalizedMessage());
+        }
+    }
+    public void connectToMuse(){
+        Intent activityIntent = new Intent("io.neuos.PairDevice");
+        List<ResolveInfo> matches=getPackageManager()
+                .queryIntentActivities(activityIntent , PackageManager.MATCH_ALL);
+        Intent explicit=new Intent(activityIntent);
+        ActivityInfo info = matches.get(0).activityInfo;
+        ComponentName cn = new ComponentName(info.applicationInfo.packageName,
+                info.name);
+        explicit.setComponent(cn);
+        startActivity(explicit);
+    }
+
+    public void checkNeuosLoginStatus() {
+        try {
+            int status = mService.getUserLoginStatus();
+            switch (status){
+                case NeuosSDK.LoginStatus.LOGGED_IN:{
+                    Log.i(TAG, "login: Logged In");
+                    checkCalibrationStatus();
+                    break;
+                }
+                case NeuosSDK.LoginStatus.NOT_LOGGED_IN:{
+                    Log.i(TAG, "login: Not Logged In");
+                    launchHome();
+                    break;
+                }
+            }
+        } catch (RemoteException e) {
+            Log.e(TAG, e.getLocalizedMessage());
+        }
+    }
+
+    private void launchHome(){
+        Intent activityIntent = new Intent("io.neuos.NeuosLogin");
+
+        /*activityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        activityIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);*/
+        List<ResolveInfo> matches=getPackageManager()
+                .queryIntentActivities(activityIntent , PackageManager.MATCH_ALL);
+        Intent explicit=new Intent(activityIntent);
+        ActivityInfo info = matches.get(0).activityInfo;
+        ComponentName cn = new ComponentName(info.applicationInfo.packageName,
+                info.name);
+        explicit.setComponent(cn);
+        //TODO: Start activity for result
+        startActivity(explicit);
+        //TODO: When this returns, call check calibration
+    }
 
     boolean doBindService() {
         try {
