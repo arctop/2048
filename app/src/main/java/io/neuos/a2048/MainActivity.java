@@ -1,5 +1,6 @@
 package io.neuos.a2048;
 
+import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -24,25 +25,11 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
-//import com.google.android.gms.auth.api.Auth;
-//import com.google.android.gms.auth.api.signin.GoogleSignIn;
-//import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
-//import com.google.android.gms.auth.api.signin.GoogleSignInClient;
-//import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
-//import com.google.android.gms.auth.api.signin.GoogleSignInResult;
-//import com.google.android.gms.drive.Drive;
-//import com.google.android.gms.games.Games;
-//import com.google.android.gms.games.GamesClient;
-//import com.google.android.gms.tasks.OnCompleteListener;
-//import com.google.android.gms.tasks.Task;
-
 import java.util.List;
-
-//import io.neuos.a2048.snapshot.SnapshotData;
-//import io.neuos.a2048.snapshot.SnapshotManager;
 
 import io.neuos.INeuosSdk;
 import io.neuos.INeuosSdkListener;
+import io.neuos.NeuosQAProperties;
 import io.neuos.NeuosSDK;
 
 public class MainActivity extends AppCompatActivity {
@@ -56,12 +43,6 @@ public class MainActivity extends AppCompatActivity {
     private static final String UNDO_GRID = "undo";
     private static final String GAME_STATE = "game state";
     private static final String UNDO_GAME_STATE = "undo game state";
-
-    private static final String NO_LOGIN_PROMPT = "no_login_prompt";
-
-    private static final int RC_SIGN_IN = 9001;
-
-    private boolean firstLoginAttempt = false;
 
     private MainView view;
 
@@ -78,9 +59,11 @@ public class MainActivity extends AppCompatActivity {
                 load();
             }
         }
-        deviceListReceiver = new MuseConnectionBroadcastReceiver();
+        // Register to receive device pairing callbacks
+        deviceListReceiver = new DeviceConnectionReceiver();
         registerReceiver(deviceListReceiver,
                 new IntentFilter(NeuosSDK.IO_NEUOS_DEVICE_PAIRING_ACTION));
+        // Start the flow by verifying the permissions to use the SDK
         checkSDKPermissions();
         setContentView(view);
     }
@@ -152,7 +135,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         load();
-//        signInToGoogle();
     }
 
     private void load() {
@@ -189,8 +171,17 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         try {
+            // Make sure to close the session and unregister everything
+
+            /**
+             * NOTE - For this example we aren't waiting for the SDK to upload the files,
+             * Normally, you would call finishSession(), and wait for the call back from
+             * onSessionComplete() before shutting down and exiting.
+            */
             mService.finishSession();
+            mService.shutdownSdk();
             unregisterReceiver(deviceListReceiver);
+
         } catch (RemoteException e) {
             e.printStackTrace();
         }
@@ -198,83 +189,16 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Signs into Google. Used for cloud saves.
+     * Neuos Section
      */
-//    private void signInToGoogle() {
-//        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
-//        final boolean noLoginPrompt = settings.getBoolean(NO_LOGIN_PROMPT, false);
-//        GoogleSignInOptions signInOptions =
-//                new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_GAMES_SIGN_IN)
-//                        .requestScopes(Drive.SCOPE_APPFOLDER)
-//                        .build();
-//        final GoogleSignInClient signInClient = GoogleSignIn.getClient(this, signInOptions);
-//        signInClient.silentSignIn().addOnCompleteListener(this, new OnCompleteListener<GoogleSignInAccount>() {
-//            @Override
-//            public void onComplete(@NonNull Task<GoogleSignInAccount> task) {
-//                if (!task.isSuccessful()) {
-//                    if (!firstLoginAttempt && !noLoginPrompt) {
-//                        firstLoginAttempt = true;
-//                        startActivityForResult(signInClient.getSignInIntent(), RC_SIGN_IN);
-//                    }
-//                } else {
-//                    System.out.println("Successfully logged into Google.");
-//
-//                    if (task.getResult() != null) {
-//                        GamesClient client = Games.getGamesClient(MainActivity.this, task.getResult());
-//                        client.setViewForPopups(view);
-//                    }
-//
-//                    SnapshotManager.loadSnapshot(MainActivity.this, new SnapshotManager.Callback() {
-//                        @Override
-//                        public void run(@NonNull SnapshotData data) {
-//                            view.game.handleSnapshot(data);
-//                        }
-//                    });
-//                }
-//            }
-//        });
-//    }
-
-    /*@Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-//        if (requestCode != RC_SIGN_IN) {
-//            return;
-//        }
-//
-//        GoogleSignInResult result = Auth.GoogleSignInApi.getSignInResultFromIntent(data);
-//        if (result == null) {
-//            return;
-//        }
-//
-//        if (!result.isSuccess()) {
-//            SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
-//            SharedPreferences.Editor editor = settings.edit();
-//            editor.putBoolean(NO_LOGIN_PROMPT, true);
-//            editor.apply();
-//            System.out.println(result.getStatus());
-//        } else {
-//            if (result.getSignInAccount() != null) {
-//                GamesClient client = Games.getGamesClient(MainActivity.this, result.getSignInAccount());
-//                client.setViewForPopups(view);
-//            }
-//            SnapshotManager.loadSnapshot(MainActivity.this, new SnapshotManager.Callback() {
-//                @Override
-//                public void run(@NonNull SnapshotData data) {
-//                    view.game.handleSnapshot(data);
-//                }
-//            });
-//        }
-    }*/
-
     final String TAG = "Neuos SDK";
+    // TODO: This API key should be elsewhere
     final String API_KEY = "aaaa";
-    public static final String PREDICTION_NAME = "zone";
     private INeuosSdk mService;
     private Runnable mPostConnection;
-    private MuseConnectionBroadcastReceiver deviceListReceiver;
-    private class MuseConnectionBroadcastReceiver extends BroadcastReceiver {
-
+    private DeviceConnectionReceiver deviceListReceiver;
+    // Callback class for device connections from Neuos
+    private class DeviceConnectionReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
             String address = intent.getStringExtra(io.neuos.NeuosSDK.DEVICE_ADDRESS_EXTRA);
@@ -286,6 +210,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
+    // Neuos SDK Listener
     private final INeuosSdkListener mCallback = new INeuosSdkListener.Stub() {
         @Override
         public void onConnectionChanged(int previousConnection, int currentConnection) throws RemoteException {
@@ -300,6 +225,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onValueChanged(String key, float value) throws RemoteException {
             Log.i(TAG, "onValueChanged K: " + key + " V: " + value);
+            // update our view with proper values
             view.updateNeuosValue(key, value);
         }
         @Override
@@ -318,12 +244,35 @@ public class MainActivity extends AppCompatActivity {
             Log.i(TAG, "onError Code: " + errorCode + " " + message);
         }
     };
+
+    // Activity launcher from login
+    private final ActivityResultLauncher<Intent> loginResultLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == Activity.RESULT_OK) {
+                    checkCalibrationStatus();
+                }
+            });
+    // Activity launcher for QA result
+    private final ActivityResultLauncher<Intent> qaResultLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() != Activity.RESULT_OK) {
+                    // Here you should work with your user to get his headband working
+                    showError("QA Failed!");
+                    // Or terminate the session
+                    try {
+                        mService.terminateSessionQaFailed();
+                    } catch (RemoteException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+    // Activity launcher for permissions request
     private final ActivityResultLauncher<String> requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
                 if (isGranted) {
-                    // Permission is granted. Continue the action or workflow in your
-                    // app.
-                    //launchHome();
+                    // Permission is granted. Continue the action or workflow in your app
                     doBindService();
                 } else {
                     // Explain to the user that the feature is unavailable because the
@@ -333,6 +282,9 @@ public class MainActivity extends AppCompatActivity {
                     // decision.
                 }
             });
+
+    // Helper function that tests if we have permissions
+    // and starts the binding process or requests the permissions
     private void checkSDKPermissions(){
         if (ContextCompat.checkSelfPermission(
                 this, NeuosSDK.NEUOS_PERMISSION) ==
@@ -366,12 +318,19 @@ public class MainActivity extends AppCompatActivity {
             mService = INeuosSdk.Stub.asInterface(service);
             try {
                 int response = mService.initializeNeuos(API_KEY);
-                if ( response != NeuosSDK.ErrorCodes.SUCCESS){
+                if ( response != NeuosSDK.ResponseCodes.SUCCESS){
                     Log.i(TAG, "initialize: failed with code " + response);
+                    showError("initialize: failed with code " + response);
                 }
                 else{
                     response = mService.registerSDKCallback(mCallback);
-                    checkNeuosLoginStatus();
+                    if ( response != NeuosSDK.ResponseCodes.SUCCESS){
+                        Log.i(TAG, "registerSDKCallback: failed with code " + response);
+                        showError("registerSDKCallback failed with code " + response);
+                    }
+                    else {
+                        checkNeuosLoginStatus();
+                    }
                     Log.i(TAG, "register callback: returned with code " + response);
                 }
             } catch (RemoteException e) {
@@ -383,48 +342,58 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "Detached.");
         }
     };
-    public void checkCalibrationStatus(){
+
+    // Check the user calibration status before starting a session
+    private void checkCalibrationStatus(){
         try {
             int calibrationStatus = mService.checkUserCalibrationStatus();
             Log.i(TAG, "onUserCalibrationStatus: " + calibrationStatus);
             if (calibrationStatus == NeuosSDK.UserCalibrationStatus.NEEDS_CALIBRATION){
-                connectToMuse();
-                //TODO:
-                //mPostConnection = () -> startCalibration(null);
+                // Here you can instead launch the calibration activity for the user.
+                // We don't do this in this context, but you can do this using the code in startCalibration()
+                showError("User is not calibrated. Cannot perform realtime stream");
             }
             else if (calibrationStatus == NeuosSDK.UserCalibrationStatus.MODELS_AVAILABLE){
-                connectToMuse();
-                //TODO: add QA here as well.
-                mPostConnection = () -> startSession();
+                connectToDevice();
+                mPostConnection = () -> {
+                    // Start a session
+                    if (startSession() == NeuosSDK.ResponseCodes.SUCCESS) {
+                        // once started successfully, launch QA screen
+                        launchQAScreen();
+                    }
+                };
             }
         } catch (RemoteException e) {
             Log.e(TAG, e.getLocalizedMessage());
         }
     }
-    public void startSession() {
+    // Start a session
+    private int startSession() {
+        int response = -1;
         try {
-            //isSessionInProgress = true;
-            int response = mService.startPredictionSession(PREDICTION_NAME);
-            if ( response != NeuosSDK.ErrorCodes.SUCCESS){
+            response = mService.startPredictionSession(NeuosSDK.Predictions.ZONE);
+            if ( response != NeuosSDK.ResponseCodes.SUCCESS){
                 Log.i(TAG, "startSession: failed with code " + response);
+                showError("startSession: failed with code " + response);
             }
         } catch (RemoteException e) {
             Log.e(TAG, e.getLocalizedMessage());
         }
+        return response;
     }
-    public void connectToMuse(){
-        Intent activityIntent = new Intent("io.neuos.PairDevice");
-        List<ResolveInfo> matches=getPackageManager()
-                .queryIntentActivities(activityIntent , PackageManager.MATCH_ALL);
-        Intent explicit=new Intent(activityIntent);
-        ActivityInfo info = matches.get(0).activityInfo;
-        ComponentName cn = new ComponentName(info.applicationInfo.packageName,
-                info.name);
-        explicit.setComponent(cn);
+
+    // Starts the process of connecting to a device
+    private void connectToDevice(){
+        Intent explicit = getExplicitIntent(new Intent(NeuosSDK.NEUOS_PAIR_DEVICE));
+        if (explicit == null){
+            showError("Cannot find Neuos pair device activity");
+            return;
+        }
         startActivity(explicit);
     }
 
-    public void checkNeuosLoginStatus() {
+    // Check the login status of a use
+    private void checkNeuosLoginStatus() {
         try {
             int status = mService.getUserLoginStatus();
             switch (status){
@@ -435,7 +404,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 case NeuosSDK.LoginStatus.NOT_LOGGED_IN:{
                     Log.i(TAG, "login: Not Logged In");
-                    launchHome();
+                    launchLogin();
                     break;
                 }
             }
@@ -443,25 +412,29 @@ public class MainActivity extends AppCompatActivity {
             Log.e(TAG, e.getLocalizedMessage());
         }
     }
-
-    private void launchHome(){
-        Intent activityIntent = new Intent("io.neuos.NeuosLogin");
-
-        /*activityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        activityIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);*/
-        List<ResolveInfo> matches=getPackageManager()
-                .queryIntentActivities(activityIntent , PackageManager.MATCH_ALL);
-        Intent explicit=new Intent(activityIntent);
-        ActivityInfo info = matches.get(0).activityInfo;
-        ComponentName cn = new ComponentName(info.applicationInfo.packageName,
-                info.name);
-        explicit.setComponent(cn);
-        //TODO: Start activity for result
-        startActivity(explicit);
-        //TODO: When this returns, call check calibration
+    // Launches the Neuos Login activity
+    private void launchLogin(){
+        Intent explicit = getExplicitIntent(new Intent(NeuosSDK.NEUOS_LOGIN));
+        if (explicit == null){
+            showError("Cannot find Neuos Login activity");
+            return;
+        }
+        loginResultLauncher.launch(explicit);
     }
-
-    boolean doBindService() {
+    // Launches the QA activity
+    private void launchQAScreen() {
+        Intent explicit = getExplicitIntent(new Intent(NeuosSDK.NEUOS_QA_SCREEN));
+        if (explicit == null){
+            showError("Cannot find QA activity");
+            return;
+        }
+        explicit.putExtra(NeuosQAProperties.STAND_ALONE , true);
+        explicit.putExtra(NeuosQAProperties.TASK_PROPERTIES ,
+                new NeuosQAProperties(NeuosQAProperties.Quality.Normal , NeuosQAProperties.INFINITE_TIMEOUT));
+        qaResultLauncher.launch(explicit);
+    }
+    // Binds to Neuos Service
+    private boolean doBindService() {
         try {
             // Create an intent based on the class name
             Intent serviceIntent = new Intent(INeuosSdk.class.getName());
@@ -470,15 +443,12 @@ public class MainActivity extends AppCompatActivity {
                     .queryIntentServices(serviceIntent, 0);
             if (matches.size() == 0) {
                 Log.d(TAG, "Cannot find a matching service!");
-                Toast.makeText(this, "Cannot find a matching service!",
-                        Toast.LENGTH_LONG).show();
+                showError("Cannot find a matching service!");
             }
             else if (matches.size() > 1) {
                 // This is really just a sanity check
                 // and should never occur in a real life scenario
-                Log.d(TAG, "Found multiple matching services!");
-                Toast.makeText(this, "Found multiple matching services!",
-                        Toast.LENGTH_LONG).show();
+                showError("Found multiple matching services!");
             }
             else {
                 // Create an explicit intent
@@ -492,12 +462,42 @@ public class MainActivity extends AppCompatActivity {
                     Log.d(TAG, "Bound to Neuos Service");
                 } else {
                     Log.d(TAG, "Failed to bind to Neuos Service");
+                    showError("Failed to bind to Neuos Service");
                 }
             }
         } catch (Exception e) {
             Log.e(TAG, "can't bind to NeuosService, check permission in Manifest");
+            showError("can't bind to NeuosService, check permission in Manifest");
         }
         return false;
+    }
+
+    private void showError(String message){
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+    }
+
+    // Use this to launch a calibration session in case your user isn't calibrated
+    private void startCalibration() {
+        Intent explicit = getExplicitIntent(new Intent(NeuosSDK.NEUOS_CALIBRATION));
+        if (explicit != null) {
+            startActivity(explicit);
+        }
+    }
+
+    private Intent getExplicitIntent(Intent activityIntent){
+        List<ResolveInfo> matches=getPackageManager()
+                .queryIntentActivities(activityIntent , PackageManager.MATCH_ALL);
+        // if we couldn't find one, return null
+        if (matches.isEmpty()) {
+            return null;
+        }
+        // there really should only be 1 match, so we get the first one.
+        Intent explicit=new Intent(activityIntent);
+        ActivityInfo info = matches.get(0).activityInfo;
+        ComponentName cn = new ComponentName(info.applicationInfo.packageName,
+                info.name);
+        explicit.setComponent(cn);
+        return explicit;
     }
 
 }
