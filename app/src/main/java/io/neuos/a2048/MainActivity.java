@@ -226,7 +226,7 @@ public class MainActivity extends AppCompatActivity {
         public void onValueChanged(String key, float value) throws RemoteException {
             Log.i(TAG, "onValueChanged K: " + key + " V: " + value);
             // update our view with proper values
-            view.updateNeuosValue(key, value);
+            view.updateNeuosValue(key, Math.round(value));
         }
         @Override
         public void onQAStatus(boolean passed , int type){
