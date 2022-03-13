@@ -193,7 +193,7 @@ public class MainActivity extends AppCompatActivity {
      */
     final String TAG = "Neuos SDK";
     // TODO: This API key should be elsewhere
-    final String API_KEY = "aaaa";
+    final String API_KEY = "8AXRD2RBBCPjJYu3q";
     private INeuosSdk mService;
     private Runnable mPostConnection;
     private DeviceConnectionReceiver deviceListReceiver;
