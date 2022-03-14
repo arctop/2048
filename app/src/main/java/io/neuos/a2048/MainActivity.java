@@ -311,7 +311,7 @@ public class MainActivity extends AppCompatActivity {
     /**
      * Class for interacting with the main interface of the service.
      */
-    private ServiceConnection mConnection = new ServiceConnection() {
+    private final ServiceConnection mConnection = new ServiceConnection() {
         public void onServiceConnected(ComponentName className,
                                        IBinder service) {
             Log.d(TAG, "Attached.");
