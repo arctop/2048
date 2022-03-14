@@ -74,10 +74,10 @@ public class MainView extends View {
     private int titleWidthScore;
 
     // storing neuos values
-    private float focusValue;
-    private float enjoymentValue;
-    private float zoneValue;
-    private float heartRateValue;
+    private int focusValue;
+    private int enjoymentValue;
+    private int zoneValue;
+    private int heartRateValue;
 
     public MainView(Context context) {
         super(context);
@@ -118,19 +118,19 @@ public class MainView extends View {
     public void updateNeuosValue(String key , float value){
         switch (key){
             case NeuosSDK.PredictionValues.ZONE_STATE:{
-                zoneValue = value;
+                zoneValue = (int)value;
                 break;
             }
             case NeuosSDK.PredictionValues.ENJOYMENT_STATE:{
-                enjoymentValue = value;
+                enjoymentValue = (int)value;
                 break;
             }
             case NeuosSDK.PredictionValues.FOCUS_STATE:{
-                focusValue = value;
+                focusValue = (int)value;
                 break;
             }
             case NeuosSDK.PredictionValues.HEART_RATE:{
-                heartRateValue = value;
+                heartRateValue = (int)value;
                 break;
             }
         }
@@ -481,7 +481,7 @@ public class MainView extends View {
     }
 
     // Draws a single neuos item at the bottom of the screen
-    private void drawNeuosItem(Canvas canvas ,String title, float value , int cellIndex){
+    private void drawNeuosItem(Canvas canvas ,String title, int value , int cellIndex){
         int top = endingY + textPaddingSize * 4;
         int start = startingX + cellIndex * (cellSize + textPaddingSize);
         Drawable rect = getResources().getDrawable(neuosRects[cellIndex]);
