@@ -348,20 +348,25 @@ public class MainActivity extends AppCompatActivity {
         try {
             int calibrationStatus = mService.checkUserCalibrationStatus();
             Log.i(TAG, "onUserCalibrationStatus: " + calibrationStatus);
-            if (calibrationStatus == NeuosSDK.UserCalibrationStatus.NEEDS_CALIBRATION){
-                // Here you can instead launch the calibration activity for the user.
-                // We don't do this in this context, but you can do this using the code in startCalibration()
-                showError("User is not calibrated. Cannot perform realtime stream");
-            }
-            else if (calibrationStatus == NeuosSDK.UserCalibrationStatus.MODELS_AVAILABLE){
-                connectToDevice();
-                mPostConnection = () -> {
-                    // Start a session
-                    if (startSession() == NeuosSDK.ResponseCodes.SUCCESS) {
-                        // once started successfully, launch QA screen
-                        launchQAScreen();
-                    }
-                };
+            switch (calibrationStatus) {
+                case NeuosSDK.UserCalibrationStatus.NEEDS_CALIBRATION:
+                    // Here you can instead launch the calibration activity for the user.
+                    // We don't do this in this context, but you can do this using the code in startCalibration()
+                    showError("User is not calibrated. Cannot perform realtime stream");
+                    break;
+                case NeuosSDK.UserCalibrationStatus.CALIBRATION_DONE:
+                    showError("Models for this user have yet to be processed");
+                    break;
+                case NeuosSDK.UserCalibrationStatus.MODELS_AVAILABLE:
+                    connectToDevice();
+                    mPostConnection = () -> {
+                        // Start a session
+                        if (startSession() == NeuosSDK.ResponseCodes.SUCCESS) {
+                            // once started successfully, launch QA screen
+                            launchQAScreen();
+                        }
+                    };
+                    break;
             }
         } catch (RemoteException e) {
             Log.e(TAG, e.getLocalizedMessage());
