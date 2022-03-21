@@ -2,15 +2,21 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="io.neuos.a2048"
     android:targetSandboxVersion="2">
+
     <queries>
         <package android:name="io.neuos.central" />
+
         <intent>
             <action android:name="io.neuos.NeuosExperiment" />
         </intent>
     </queries>
+
     <uses-permission android:name="io.neuos.permission.NEUOS_DATA" />
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <queries>
+        <package android:name="io.neuos.central" />
+    </queries>
 
     <application
         android:allowBackup="true"
@@ -18,14 +24,26 @@
         android:label="@string/app_name"
         android:theme="@style/AppTheme">
         <activity
-            android:name="io.neuos.a2048.MainActivity"
+            android:name=".NeuosActivity"
+            android:exported="true"
             android:label="@string/app_name"
-            android:screenOrientation="portrait"
-            android:exported="true">
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:screenOrientation="portrait">
+            <!--intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter-->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
 
@@ -33,9 +51,9 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:scheme="http"
                     android:host="tpcstld.me"
-                    android:path="/2048" />
+                    android:path="/2048"
+                    android:scheme="http" />
             </intent-filter>
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
@@ -44,22 +62,19 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:scheme="https"
                     android:host="tpcstld.me"
-                    android:path="/2048" />
+                    android:path="/2048"
+                    android:scheme="https" />
             </intent-filter>
 
             <meta-data
                 android:name="default-url"
                 android:value="http://tpcstld.me/2048" />
         </activity>
-        <meta-data android:name="io.sentry.dsn" android:value="https://cfdac1d211074bbc988ef0ecf7c6b66b@o380226.ingest.sentry.io/5205822" />
 
-<!--        <meta-data android:name="com.google.android.gms.games.APP_ID"-->
-<!--            android:value="@string/app_id"/>-->
+        <meta-data
+            android:name="io.sentry.dsn"
+            android:value="https://cfdac1d211074bbc988ef0ecf7c6b66b@o380226.ingest.sentry.io/5205822" />
     </application>
-    <queries>
-        <package android:name="io.neuos.central" />
-    </queries>
-</manifest>
 
+</manifest>

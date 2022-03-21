@@ -38,6 +38,7 @@ public class MainView extends View {
     public int sYIcons;
     public int sXNewGame;
     public int sXUndo;
+    public int sXFinishGame;
     public int iconSize;
     //Misc
     boolean refreshLastTime = true;
@@ -79,7 +80,7 @@ public class MainView extends View {
     private int zoneValue;
     private int heartRateValue;
 
-    public MainView(Context context) {
+    public MainView(Context context , MainActivity activity) {
         super(context);
 
         Resources resources = context.getResources();
@@ -97,7 +98,7 @@ public class MainView extends View {
         } catch (Exception e) {
             Log.e(TAG, "Error getting assets?", e);
         }
-        setOnTouchListener(new InputListener(this));
+        setOnTouchListener(new InputListener(this , activity));
         game.newGame();
     }
 
@@ -291,6 +292,24 @@ public class MainView extends View {
         );
     }
 
+    private void drawFinishSessionButton(Canvas canvas) {
+
+        drawDrawable(canvas,
+                backgroundRectangle,
+                sXFinishGame,
+                sYIcons, sXFinishGame + iconSize,
+                sYIcons + iconSize
+        );
+
+        drawDrawable(canvas,
+                getResources().getDrawable(R.drawable.ic_finish_button),
+                sXFinishGame + iconPaddingSize,
+                sYIcons + iconPaddingSize,
+                sXFinishGame + iconSize - iconPaddingSize,
+                sYIcons + iconSize - iconPaddingSize
+        );
+    }
+
     private void drawHeader(Canvas canvas) {
         paint.setTextSize(headerTextSize);
         paint.setColor(getResources().getColor(R.color.text_black));
@@ -475,6 +494,7 @@ public class MainView extends View {
         drawHeader(canvas);
         drawNewGameButton(canvas, false);
         drawUndoButton(canvas);
+        drawFinishSessionButton(canvas);
         drawBackground(canvas);
         drawBackgroundGrid(canvas);
         drawInstructions(canvas);
@@ -621,6 +641,7 @@ public class MainView extends View {
         sYIcons = (startingY + eYAll) / 2 - iconSize / 2;
         sXNewGame = (endingX - iconSize);
         sXUndo = sXNewGame - iconSize * 3 / 2 - iconPaddingSize;
+        sXFinishGame = sXUndo - iconSize * 3 / 2 - iconPaddingSize;
 
         resyncTime();
     }

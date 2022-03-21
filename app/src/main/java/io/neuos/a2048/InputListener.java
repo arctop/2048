@@ -1,5 +1,6 @@
 package io.neuos.a2048;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.view.MotionEvent;
@@ -12,6 +13,7 @@ class InputListener implements View.OnTouchListener {
     private static final int MOVE_THRESHOLD = 250;
     private static final int RESET_STARTING = 10;
     private final MainView mView;
+    private final MainActivity mainActivity;
     private float x;
     private float y;
     private float lastDx;
@@ -28,9 +30,10 @@ class InputListener implements View.OnTouchListener {
     // the press on an icon.
     private boolean beganOnIcon = false;
 
-    public InputListener(MainView view) {
+    public InputListener(MainView view , MainActivity mainActivity) {
         super();
         this.mView = view;
+        this.mainActivity = mainActivity;
     }
 
     public boolean onTouch(View view, MotionEvent event) {
@@ -137,7 +140,11 @@ class InputListener implements View.OnTouchListener {
 
                     } else if (iconPressed(mView.sXUndo, mView.sYIcons)) {
                         mView.game.revertUndoState();
-                    } else if (isTap(2) && inRange(mView.startingX, x, mView.endingX)
+                    }
+                    else if (iconPressed(mView.sXFinishGame, mView.sYIcons)) {
+                        mainActivity.finishSessionClicked();
+                    }
+                    else if (isTap(2) && inRange(mView.startingX, x, mView.endingX)
                             && inRange(mView.startingY, y, mView.endingY) && mView.continueButtonEnabled) {
                         mView.game.setEndlessMode();
                     }
