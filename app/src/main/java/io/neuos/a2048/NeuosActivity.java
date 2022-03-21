@@ -129,7 +129,7 @@ public class NeuosActivity extends AppCompatActivity {
             Log.i(TAG, "onSessionComplete");
             // Once the session upload is complete, hide the dialog and allow re-launch
             runOnUiThread( () -> {
-                    loadingDialog.hide();
+                    loadingDialog.dismiss();
                     launchButton.setEnabled(true);
             });
         }
