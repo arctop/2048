@@ -6,6 +6,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -35,7 +36,7 @@ import io.neuos.NeuosSDK;
 public class NeuosActivity extends AppCompatActivity {
 
     private Button launchButton;
-    private ProgressDialog loadingDialog;
+    private AlertDialog loadingDialog;
     final String TAG = "Neuos SDK";
     // TODO: This API key should be elsewhere
     final String API_KEY = "8AXRD2RBBCPjJYu3q";
@@ -52,9 +53,10 @@ public class NeuosActivity extends AppCompatActivity {
                 new IntentFilter(NeuosSDK.IO_NEUOS_DEVICE_PAIRING_ACTION));
         // Start the flow by verifying the permissions to use the SDK
         checkSDKPermissions();
-        loadingDialog = new ProgressDialog(this);
-        loadingDialog.setTitle("Uploading...");
-        loadingDialog.setIndeterminate(true);
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setView(R.layout.progress_dialog);
+        // This should be called once in your Fragment's onViewCreated() or in Activity onCreate() method to avoid dialog duplicates.
+        loadingDialog = builder.create();
         setContentView(R.layout.activity_neuos);
         launchButton = findViewById(R.id.launch);
     }
@@ -191,22 +193,13 @@ public class NeuosActivity extends AppCompatActivity {
                 PackageManager.PERMISSION_GRANTED) {
             // You can use the API that requires the permission.
             doBindService();
-            //performAction(...);
-        } /*else if (shouldShowRequestPermissionRationale(...)) {
-            // In an educational UI, explain to the user why your app requires this
-            // permission for a specific feature to behave as expected. In this UI,
-            // include a "cancel" or "no thanks" button that allows the user to
-            // continue using your app without granting the permission.
-            //showInContextUI(...);
-        }*/ else {
+        } else {
             // You can directly ask for the permission.
             // The registered ActivityResultCallback gets the result of this request.
             requestPermissionLauncher.launch(
                     NeuosSDK.NEUOS_PERMISSION);
         }
     }
-
-
 
     /**
      * Class for interacting with the main interface of the service.
@@ -294,7 +287,7 @@ public class NeuosActivity extends AppCompatActivity {
         startActivity(explicit);
     }
 
-    // Check the login status of a use
+    // Check the login status of a user
     private void checkNeuosLoginStatus() {
         try {
             int status = mService.getUserLoginStatus();
