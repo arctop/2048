@@ -487,13 +487,13 @@ public class MainView extends View {
         Drawable rect = getResources().getDrawable(neuosRects[cellIndex]);
         rect.setBounds(start, top , start + cellSize, top + cellSize);
         rect.draw(canvas);
-        int textShiftY = 0;//centerText();
-        paint.setTextSize(titleTextSize * 1.5f);
+        int textShiftY = 15;//centerText();
+        paint.setTextSize(titleTextSize * 1.3f);
         paint.setColor(getResources().getColor(R.color.text_white));
-        canvas.drawText(title, start + cellSize / 2, top + cellSize  / 6 , paint);
+        canvas.drawText(title, start + cellSize / 2, top + cellSize  / 4 , paint);
         paint.setTextSize(bodyTextSize);
         textShiftY = centerText();
-        canvas.drawText("" + value, start + cellSize / 2, top + (cellSize  - textShiftY) /2 , paint);
+        canvas.drawText("" + value, start + cellSize / 2, top + cellSize / 2 - textShiftY , paint);
     }
 
     private void createBitmapCells() {
