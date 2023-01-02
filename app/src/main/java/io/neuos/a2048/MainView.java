@@ -78,7 +78,6 @@ public class MainView extends View {
     private int focusValue;
     private int enjoymentValue;
     private int zoneValue;
-    private int heartRateValue;
 
     public MainView(Context context , MainActivity activity) {
         super(context);
@@ -130,10 +129,6 @@ public class MainView extends View {
                 focusValue = (int)value;
                 break;
             }
-            case NeuosSDK.PredictionValues.HEART_RATE:{
-                heartRateValue = (int)value;
-                break;
-            }
         }
         invalidate();
     }
@@ -174,7 +169,7 @@ public class MainView extends View {
         drawNeuosItem(canvas, "Focus" , focusValue , 0);
         drawNeuosItem(canvas, "Enjoyment" , enjoymentValue , 1);
         drawNeuosItem(canvas, "Zone", zoneValue , 2);
-        drawNeuosItem(canvas, "Heart Rate" , heartRateValue , 3);
+        //drawNeuosItem(canvas, "Heart Rate" , heartRateValue , 3);
     }
 
     @Override
