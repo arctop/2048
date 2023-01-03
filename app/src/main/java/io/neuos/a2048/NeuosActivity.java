@@ -115,6 +115,13 @@ public class NeuosActivity extends AppCompatActivity {
                 }
             }
         }
+
+        @Override
+        public void onMotionData(float[] motionData, int motionType) throws RemoteException {
+            // we don't actually do anything with this but you could show or work with
+            // raw accelerometer or gyroscope data
+        }
+
         @Override
         public void onValueChanged(String key, float value) throws RemoteException {
             Log.i(TAG, "onValueChanged K: " + key + " V: " + value);

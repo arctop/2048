@@ -175,6 +175,13 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onConnectionChanged(int previousConnection, int currentConnection) throws RemoteException {
         }
+
+        @Override
+        public void onMotionData(float[] motionData, int motionType) throws RemoteException {
+            // we don't actually do anything with this but you could show or work with
+            // raw accelerometer or gyroscope data
+        }
+
         @Override
         public void onValueChanged(String key, float value) throws RemoteException {
             // update our view with proper values

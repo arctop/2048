@@ -38,5 +38,5 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.3'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
     // Neuos SDK dependency
-    implementation 'com.github.arctop:Neuos-SDK:v0.1.9'
+    implementation 'com.github.arctop:Neuos-SDK:0.2.9'
 }
